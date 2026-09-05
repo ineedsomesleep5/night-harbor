@@ -25,8 +25,8 @@ export const defaultMemory = (): NightMemory => ({
     startMuted: false,
     showVideo: true,
     narrator: "system",
-    speechVol: 0.72,
-    atmosphereVol: 0.7,
+    speechVol: 0.85,
+    atmosphereVol: 0.85,
   },
 });
 

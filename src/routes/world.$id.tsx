@@ -5,6 +5,8 @@ import { NightTray } from "@/components/night-tray";
 import { worlds } from "@/content/worlds";
 import type { WorldId } from "@/content/types";
 import { rememberWorld } from "@/engine/memory";
+import { atmosphere } from "@/engine/audio";
+import { narrator } from "@/engine/voice";
 import { useNight } from "@/engine/night-store";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +32,8 @@ function WorldRoom() {
     } catch {
       /* no speech */
     }
+    atmosphere.unlock();
+    narrator.unlock();
     return () => {
       useNight.getState().stop();
     };

@@ -1,6 +1,6 @@
 import type { WorldId } from "./types";
 
-export const RECIPE_VERSION = 1;
+export const RECIPE_VERSION = 2;
 
 export type AudioRecipe = {
   bed: "fire" | "hush" | "house";
@@ -44,7 +44,7 @@ export const videoRecipes: Record<WorldId, VideoRecipe> = {
       "Quilt on a wooden chair beside a quiet wood stove, dim cabin, no people.",
     ],
     videoPrompt:
-      "The cabin holds still. Fire flickers. Rain streaks the window. Steam from the kettle. Camera breathes a 2cm drift. Seamless loop, no people, no faces, no text, no logos, no camera whip, no jump cuts, photoreal nighttime, film grain.",
+      "Locked tripod. No zoom, no pan, no dolly. Fire flickers. Rain streaks the window. Steam from the kettle. Only in-scene motion. Seamless loop, no people, no faces, no text, photoreal nighttime, film grain.",
   },
   archipelago: {
     stillPrompt:
@@ -55,7 +55,7 @@ export const videoRecipes: Record<WorldId, VideoRecipe> = {
       "Wooden pilings in warm grey mist, quiet water, no people, film grain.",
     ],
     videoPrompt:
-      "Fog drifts slowly sideways through a fishing village. Lantern light holds. Wet cobbles gleam. Camera almost still. Seamless loop, no people, no faces, no text, no logos, no boats crashing, no jump cuts, photoreal nighttime, film grain.",
+      "Locked tripod. No zoom, no pan, no dolly. Fog drifts slowly sideways. Lantern light holds. Wet cobbles gleam. Only in-scene motion. Seamless loop, no people, no faces, no text, photoreal nighttime, film grain.",
   },
   house: {
     stillPrompt:
@@ -66,7 +66,7 @@ export const videoRecipes: Record<WorldId, VideoRecipe> = {
       "Kitchen window fogged from something already finished, night, no people.",
     ],
     videoPrompt:
-      "The hallway is almost still. Warm kitchen light pulses faintly. Dust motes drift. Camera breathes a 2cm drift. Seamless loop, no people, no faces, no text, no logos, no camera whip, no jump cuts, photoreal nighttime, film grain.",
+      "Locked tripod. No zoom, no pan, no dolly. Warm kitchen light pulses faintly. Dust motes drift. Only in-scene motion. Seamless loop, no people, no faces, no text, photoreal nighttime, film grain.",
   },
 };
 

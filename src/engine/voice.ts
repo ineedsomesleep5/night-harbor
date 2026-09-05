@@ -5,16 +5,16 @@ export type NarratorKind = "system" | "grok";
 function pickSystemVoice(): SpeechSynthesisVoice | null {
   const voices = window.speechSynthesis.getVoices();
   const en = voices.filter((v) => /en/i.test(v.lang));
-  const preferred = en.find((v) => /uk|gb|daniel|male|arthur|rishi|gordon/i.test(v.name + v.lang));
+  const preferred = en.find((v) => /uk|gb|daniel|male|arthur|rishi|gordon|david|mark|zira/i.test(v.name + v.lang));
   return preferred ?? en[0] ?? voices[0] ?? null;
 }
 
 export class Narrator {
   kind: NarratorKind = "system";
-  rate = 0.82;
+  rate = 0.84;
   paused = false;
   speaking = false;
-  volume = 0.72;
+  volume = 0.85;
   private queue: SceneCard[] = [];
   private index = 0;
   private audio: HTMLAudioElement | null = null;
@@ -24,6 +24,7 @@ export class Narrator {
   onTitle: (title: string | null) => void = () => {};
   onEnded: () => void = () => {};
   private cancelled = false;
+  private keepAlive: number | null = null;
 
   get active() {
     return this.queue.length > 0 && !this.cancelled;
@@ -31,6 +32,25 @@ export class Narrator {
 
   setKind(k: NarratorKind) {
     this.kind = k;
+  }
+
+  unlock() {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    try {
+      window.speechSynthesis.getVoices();
+      const u = new SpeechSynthesisUtterance(" ");
+      u.volume = 0;
+      u.rate = 2;
+      window.speechSynthesis.speak(u);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  arm() {
+    this.cancelled = false;
+    this.unlock();
+    this.startKeep();
   }
 
   setVolume(v: number) {
@@ -61,12 +81,33 @@ export class Narrator {
   }
 
   async play(scenes: SceneCard[], fetchGrok?: (text: string) => Promise<string | null>) {
-    this.stop();
+    this.stopKeep();
+    this.cancelled = false;
     this.queue = scenes;
     this.index = 0;
-    this.cancelled = false;
     this.fetchGrok = fetchGrok;
+    this.startKeep();
     await this.next();
+  }
+
+  private startKeep() {
+    this.stopKeep();
+    if (typeof window === "undefined") return;
+    this.keepAlive = window.setInterval(() => {
+      if (this.cancelled || this.paused) return;
+      try {
+        window.speechSynthesis.resume();
+      } catch {
+        /* ignore */
+      }
+    }, 8000) as unknown as number;
+  }
+
+  private stopKeep() {
+    if (this.keepAlive != null) {
+      window.clearInterval(this.keepAlive);
+      this.keepAlive = null;
+    }
   }
 
   private async next() {
@@ -97,27 +138,48 @@ export class Narrator {
         resolve();
         return;
       }
-      const u = new SpeechSynthesisUtterance(text);
-      const voice = pickSystemVoice();
-      if (voice) u.voice = voice;
-      u.rate = this.rate;
-      u.pitch = 0.85;
-      u.volume = this.volume;
-      this.utterance = u;
-      u.onend = () => {
-        this.speaking = false;
-        this.utterance = null;
-        this.advance();
-        resolve();
+      const speak = () => {
+        if (this.cancelled) {
+          resolve();
+          return;
+        }
+        const u = new SpeechSynthesisUtterance(text);
+        const voice = pickSystemVoice();
+        if (voice) u.voice = voice;
+        u.rate = this.rate;
+        u.pitch = 0.9;
+        u.volume = Math.max(0.15, this.volume);
+        this.utterance = u;
+        u.onend = () => {
+          this.speaking = false;
+          this.utterance = null;
+          this.advance();
+          resolve();
+        };
+        u.onerror = () => {
+          this.speaking = false;
+          this.utterance = null;
+          this.advance();
+          resolve();
+        };
+        try {
+          window.speechSynthesis.resume();
+        } catch {
+          /* ignore */
+        }
+        window.speechSynthesis.speak(u);
       };
-      u.onerror = () => {
-        this.speaking = false;
-        this.utterance = null;
-        this.advance();
-        resolve();
-      };
-      window.speechSynthesis.cancel();
-      window.speechSynthesis.speak(u);
+      const voices = window.speechSynthesis.getVoices();
+      if (!voices.length) {
+        const once = () => {
+          window.speechSynthesis.removeEventListener("voiceschanged", once);
+          speak();
+        };
+        window.speechSynthesis.addEventListener("voiceschanged", once);
+        window.setTimeout(speak, 300);
+      } else {
+        speak();
+      }
     });
   }
 
@@ -143,7 +205,7 @@ export class Narrator {
   private advance() {
     if (this.cancelled) return;
     this.index += 1;
-    const pause = 2500 + Math.random() * 1500;
+    const pause = 2200 + Math.random() * 1200;
     window.setTimeout(() => {
       void this.next();
     }, pause);
@@ -182,6 +244,7 @@ export class Narrator {
     this.queue = [];
     this.index = 0;
     this.utterance = null;
+    this.stopKeep();
     try {
       window.speechSynthesis.cancel();
     } catch {

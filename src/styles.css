@@ -62,21 +62,133 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .kenburns {
+  .ember-glow,
+  .steam-rise,
+  .fog-sheet,
+  .lantern-glow,
+  .kitchen-pulse {
     animation: none !important;
   }
 }
 
-.kenburns {
-  animation: ken 48s var(--ease-out) infinite alternate;
+.ember-glow {
+  pointer-events: none;
+  position: absolute;
+  left: 6%;
+  bottom: 8%;
+  width: 58%;
+  height: 48%;
+  background: radial-gradient(ellipse at 42% 62%, rgba(193, 122, 74, 0.42), rgba(193, 122, 74, 0.08) 42%, transparent 70%);
+  mix-blend-mode: screen;
+  animation: ember 2.1s ease-in-out infinite;
 }
 
-@keyframes ken {
+.steam-rise {
+  pointer-events: none;
+  position: absolute;
+  left: 18%;
+  bottom: 38%;
+  width: 22%;
+  height: 28%;
+  background: radial-gradient(ellipse at 50% 80%, rgba(230, 224, 212, 0.18), transparent 70%);
+  filter: blur(12px);
+  mix-blend-mode: screen;
+  animation: steam 6s ease-in-out infinite;
+}
+
+.fog-sheet {
+  pointer-events: none;
+  position: absolute;
+  inset: -18% -45%;
+  mix-blend-mode: screen;
+}
+
+.fog-a {
+  background:
+    radial-gradient(ellipse at 28% 42%, rgba(186, 196, 202, 0.28), transparent 55%),
+    radial-gradient(ellipse at 72% 58%, rgba(168, 178, 184, 0.2), transparent 50%);
+  animation: fog-drift 48s linear infinite;
+}
+
+.fog-b {
+  opacity: 0.7;
+  background:
+    radial-gradient(ellipse at 60% 30%, rgba(200, 208, 214, 0.22), transparent 52%),
+    radial-gradient(ellipse at 18% 70%, rgba(150, 160, 166, 0.16), transparent 48%);
+  animation: fog-drift 72s linear infinite reverse;
+}
+
+.lantern-glow {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 22% 48%, rgba(232, 196, 120, 0.16), transparent 18%),
+    radial-gradient(circle at 48% 52%, rgba(232, 196, 120, 0.12), transparent 14%),
+    radial-gradient(circle at 71% 46%, rgba(232, 196, 120, 0.14), transparent 16%);
+  mix-blend-mode: screen;
+  animation: lantern 3.8s ease-in-out infinite;
+}
+
+.kitchen-pulse {
+  pointer-events: none;
+  position: absolute;
+  right: 8%;
+  top: 18%;
+  width: 42%;
+  height: 55%;
+  background: radial-gradient(ellipse at 70% 55%, rgba(232, 196, 130, 0.2), transparent 62%);
+  mix-blend-mode: screen;
+  animation: lantern 4.6s ease-in-out infinite;
+}
+
+@keyframes ember {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  35% {
+    opacity: 0.8;
+  }
+  52% {
+    opacity: 0.4;
+  }
+  78% {
+    opacity: 0.72;
+  }
+}
+
+@keyframes steam {
+  0% {
+    transform: translateY(8%) scale(0.92);
+    opacity: 0.15;
+  }
+  50% {
+    transform: translateY(-18%) scale(1.05);
+    opacity: 0.35;
+  }
+  100% {
+    transform: translateY(-40%) scale(1.12);
+    opacity: 0.05;
+  }
+}
+
+@keyframes fog-drift {
   from {
-    transform: scale(1);
+    transform: translateX(0);
   }
   to {
-    transform: scale(1.04);
+    transform: translateX(-12%);
+  }
+}
+
+@keyframes lantern {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
   }
 }
 

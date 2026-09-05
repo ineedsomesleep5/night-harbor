@@ -60,23 +60,12 @@ function Home() {
 }
 
 function CardBody({ w, last, still }: { w: WorldDef; last: WorldId; still: string }) {
-  const video = filmFor(w.id).video;
   return (
     <div className="relative aspect-[3/4] bg-surface">
       <img src={still} alt="" className="absolute inset-0 h-full w-full object-cover" />
-      <video
-        className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-700 group-hover:opacity-100"
-        src={video}
-        poster={still}
-        muted
-        playsInline
-        loop
-        preload="metadata"
-        onMouseEnter={(e) => void e.currentTarget.play()}
-        onMouseLeave={(e) => {
-          e.currentTarget.pause();
-        }}
-      />
+      {w.id === "lookout" ? <div className="ember-glow" /> : null}
+      {w.id === "archipelago" ? <div className="fog-sheet fog-a opacity-80" /> : null}
+      {w.id === "house" ? <div className="kitchen-pulse" /> : null}
       <div className="absolute inset-0 bg-gradient-to-t from-bg via-bg/25 to-transparent" />
       <div className="absolute inset-x-0 bottom-0 p-5">
         <p className="font-display text-2xl tracking-tight">{w.name}</p>

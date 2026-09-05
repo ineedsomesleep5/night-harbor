@@ -2,10 +2,10 @@ import { create } from "zustand";
 import type { DurationMode, MixMode, SceneCard, WorldId } from "@/content/types";
 import { assembleNight, dayKey } from "./assembler";
 import { atmosphere } from "./audio";
-import { fragmentsFor, stitchHouseScene } from "./house";
+import { stitchHouseScene } from "./house";
 import { loadMemory, patchMemory } from "./memory";
 import { narrator } from "./voice";
-import { generateHouseSceneFn, speakSceneFn } from "@/lib/ai";
+import { speakSceneFn } from "@/lib/ai";
 import { worlds } from "@/content/worlds";
 
 type NightState = {
@@ -34,11 +34,36 @@ type NightState = {
 
 let duckTimer: number | null = null;
 let hideTimer: number | null = null;
+let speechTimer: number | null = null;
+let speechDueAt = 0;
+let speechRemainMs = 3000;
+let pendingPlaylist: SceneCard[] | null = null;
 
 function sessionMs(d: DurationMode) {
   if (d === "five") return 5 * 60 * 1000;
   if (d === "fifteen") return 15 * 60 * 1000;
   return null;
+}
+
+function clearSpeechTimer() {
+  if (speechTimer != null) {
+    window.clearTimeout(speechTimer);
+    speechTimer = null;
+  }
+}
+
+function armNarrator(get: () => NightState) {
+  clearSpeechTimer();
+  const wait = Math.max(0, speechDueAt - Date.now());
+  speechTimer = window.setTimeout(() => {
+    speechTimer = null;
+    const s = get();
+    const pl = pendingPlaylist;
+    if (!pl || !s.playing || s.paused) return;
+    if (s.mix === "weather" || s.voiceVol <= 0.02) return;
+    pendingPlaylist = null;
+    void narrator.play(pl, grokVoice);
+  }, wait) as unknown as number;
 }
 
 function hydrateVols() {
@@ -83,7 +108,14 @@ export const useNight = create<NightState>((set, get) => ({
     const s = get();
     atmosphere.applyMix(s.mix, v, s.weatherVol);
     narrator.setVolume(s.mix === "weather" ? 0 : v);
-    if (s.playing && !s.paused && v > 0.02 && !narrator.active && s.mix !== "weather") {
+    if (
+      s.playing &&
+      !s.paused &&
+      v > 0.02 &&
+      !narrator.active &&
+      s.mix !== "weather" &&
+      !pendingPlaylist
+    ) {
       void narrator.play(s.playlist, grokVoice);
     }
   },
@@ -109,32 +141,22 @@ export const useNight = create<NightState>((set, get) => ({
   },
 
   begin: async (worldId) => {
+    atmosphere.unlock();
+    narrator.arm();
     const mem = loadMemory();
     const s = get();
     if (s.playing) get().stop();
+    atmosphere.unlock();
+    narrator.arm();
 
     let generated = null as SceneCard | null;
     if (worldId === "house" && mem.useTokens) {
       const today = dayKey();
       const existing = mem.generatedScenes.find((g) => g.created.slice(0, 10) === today);
-      if (existing) {
-        generated = { id: existing.id, title: existing.title, text: existing.text, kind: "body" };
-      } else {
-        const frags = fragmentsFor(mem.houseTokens);
-        try {
-          const res = await generateHouseSceneFn({ data: { tokens: mem.houseTokens, fragments: frags } });
-          if (res.ok) {
-            generated = {
-              id: `house.gen.${Date.now()}`,
-              title: "Tonight’s indoor weather",
-              kind: "body",
-              text: res.text,
-            };
-          }
-        } catch {
-          generated = null;
-        }
-        if (!generated) generated = stitchHouseScene(mem.houseTokens);
+      generated = existing
+        ? { id: existing.id, title: existing.title, text: existing.text, kind: "body" }
+        : stitchHouseScene(mem.houseTokens);
+      if (!existing && generated) {
         patchMemory({
           generatedScenes: [
             ...mem.generatedScenes,
@@ -164,7 +186,7 @@ export const useNight = create<NightState>((set, get) => ({
     });
 
     atmosphere.muted = mem.settings.startMuted;
-    await atmosphere.start(worldId, s.weatherVol);
+    void atmosphere.start(worldId, s.weatherVol);
     atmosphere.applyMix(s.mix, s.voiceVol, s.weatherVol);
     narrator.setKind(mem.settings.narrator);
     narrator.setVolume(s.mix === "weather" ? 0 : s.voiceVol);
@@ -192,22 +214,36 @@ export const useNight = create<NightState>((set, get) => ({
       duckTimer = window.setTimeout(() => {
         atmosphere.duckToWeather(45);
         narrator.stop();
+        pendingPlaylist = null;
+        clearSpeechTimer();
         set({ currentTitle: null });
       }, ms) as unknown as number;
     }
 
-    if (s.mix !== "weather" && s.voiceVol > 0.02) {
-      await narrator.play(playlist, grokVoice);
-    }
+    pendingPlaylist = playlist;
+    speechRemainMs = 3000;
+    speechDueAt = Date.now() + 3000;
+    if (s.mix !== "weather" && s.voiceVol > 0.02) armNarrator(get);
+    else pendingPlaylist = null;
   },
 
   pause: async () => {
+    if (pendingPlaylist && speechTimer != null) {
+      speechRemainMs = Math.max(0, speechDueAt - Date.now());
+      clearSpeechTimer();
+    }
     narrator.pause();
     await atmosphere.pause();
     set({ paused: true, chromeVisible: true });
   },
   resume: async () => {
-    narrator.resume();
+    narrator.arm();
+    if (pendingPlaylist) {
+      speechDueAt = Date.now() + speechRemainMs;
+      armNarrator(get);
+    } else {
+      narrator.resume();
+    }
     await atmosphere.resume();
     set({ paused: false });
     get().showChrome();
@@ -215,6 +251,8 @@ export const useNight = create<NightState>((set, get) => ({
   stop: () => {
     if (duckTimer) window.clearTimeout(duckTimer);
     if (hideTimer) window.clearTimeout(hideTimer);
+    pendingPlaylist = null;
+    clearSpeechTimer();
     narrator.stop();
     atmosphere.stop();
     document.title = "Night Harbor";
